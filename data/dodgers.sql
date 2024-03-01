@@ -75,45 +75,92 @@ GROUP BY pos_group
 -- Tables: Pitching, Batting, People, Homegames
 -- avg strikeouts/game per decade, avg homeruns/game per decade
 
-WITH decades AS (
-	SELECT
-	generate_series(1920, 2010, 10) AS decade_start
-)
-SELECT 
-	decade_start::text || 's' AS decade,
-	ROUND(SUM(so) * 1.0 / SUM(g),2) AS so_per_game,
-	ROUND(SUM(hr) * 1.0 / SUM(g),2) AS hr_per_game
-FROM teams
-INNER JOIN decades
-ON yearid BETWEEN decade_start AND decade_start + 9
-GROUP BY decade
-ORDER BY decade;
-
--- WITH strike_outs AS(
--- 	SELECT LEFT(yearid::varchar,3) || '0s' AS decade,
--- 		SUM(pit.hr) AS sumouts
--- 		FROM pitching AS pit
--- 		WHERE yearid >= 1920
--- 		GROUP BY decade
--- 		ORDER BY decade ASC
--- ), home_runs AS (
--- 	SELECT LEFT(yearid::varchar,3) || '0s' AS decade,
--- 	SUM(bat.hr) AS sumruns
--- 	FROM batting AS bat
--- 	WHERE yearid >= 1920
--- 	GROUP BY decade
--- 	ORDER BY decade ASC
--- ), games AS (
--- 	SELECT LEFT(year::varchar,3) || '0s' AS decade, SUM(home.games) AS sumgames
--- 	FROM homegames AS home
--- 	WHERE year >= 1920
--- 	GROUP BY decade
--- 	ORDER BY decade ASC
+-- WITH decades AS (
+-- 	SELECT
+-- 	generate_series(1920, 2010, 10) AS decade_start
 -- )
--- SELECT home.decade, ROUND(strike.sumouts::NUMERIC/game.sumgames), (home.sumruns/game.sumgames), game.sumgames
--- FROM home_runs AS home
--- 	INNER JOIN strike_outs AS strike
--- 	USING (decade)
--- 	INNER JOIN games AS game
--- 	USING (decade)
+-- SELECT 
+-- 	decade_start::text || 's' AS decade,
+-- 	ROUND(SUM(so) * 1.0 / SUM(g),2) AS so_per_game,
+-- 	ROUND(SUM(hr) * 1.0 / SUM(g),2) AS hr_per_game
+-- FROM teams
+-- INNER JOIN decades
+-- ON yearid BETWEEN decade_start AND decade_start + 9
+-- GROUP BY decade
+-- ORDER BY decade;
 
+WITH strike_outs AS(
+	SELECT LEFT(yearid::varchar,3) || '0s' AS decade,
+		SUM(pit.hr) AS sumouts
+		FROM pitching AS pit
+		WHERE yearid >= 1920
+		GROUP BY decade
+		ORDER BY decade ASC
+), home_runs AS (
+	SELECT LEFT(yearid::varchar,3) || '0s' AS decade,
+	SUM(bat.hr) AS sumruns
+	FROM batting AS bat
+	WHERE yearid >= 1920
+	GROUP BY decade
+	ORDER BY decade ASC
+), games AS (
+	SELECT LEFT(year::varchar,3) || '0s' AS decade, SUM(home.games) AS sumgames
+	FROM homegames AS home
+	WHERE year >= 1920
+	GROUP BY decade
+	ORDER BY decade ASC
+)
+SELECT home.decade, ROUND(strike.sumouts::NUMERIC/game.sumgames::NUMERIC, 2), ROUND(home.sumruns::NUMERIC/game.sumgames::NUMERIC, 2), game.sumgames
+FROM home_runs AS home
+	INNER JOIN strike_outs AS strike
+	USING (decade)
+	INNER JOIN games AS game
+	USING (decade)
+
+-- 6. Find the player who had the most success stealing bases in 2016,
+-- where success is measured as the percentage of stolen base attempts which are successful.
+-- (A stolen base attempt results either in a stolen base or being caught stealing.)
+-- Consider only players who attempted at least 20 stolen bases.
+-- Tables: batting, people
+
+WITH attempts AS (
+	SELECT playerid, yearid, sb, cs
+	FROM batting
+	WHERE yearid = 2016 AND sb+cs >= 20
+)
+SELECT s.playerid, p.namefirst, p.namelast, s.sb, s.cs, ROUND((s.sb::NUMERIC/(s.sb::NUMERIC+s.cs::NUMERIC))*100,2) AS success, s.yearid
+FROM attempts AS s
+INNER JOIN people AS p
+USING (playerid)
+ORDER BY success DESC
+
+--7a. From 1970 – 2016, what is the largest number of wins for a team that did not win the world series?
+
+SELECT w
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016 AND wswin LIKE 'N'
+ORDER BY w DESC
+LIMIT 1;
+
+--7b. What is the smallest number of wins for a team that did win the world series?
+SELECT w
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016 AND wswin LIKE 'Y'
+ORDER BY w ASC
+LIMIT 1;
+-- [There were strikes in 1981]
+-- Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case.
+-- Then redo your query, excluding the problem year.
+SELECT w
+FROM teams
+WHERE yearid BETWEEN 1970 AND 1980 OR yearid BETWEEN 1981 AND 2016 AND wswin LIKE 'Y'
+ORDER BY w ASC
+LIMIT 1;
+-- How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+-- Tables: teams
+
+
+
+
+
+-
