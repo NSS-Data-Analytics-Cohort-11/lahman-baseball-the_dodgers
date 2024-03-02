@@ -191,5 +191,75 @@ WHERE yearid >=1970
 SELECT ROUND(((team_wins.teamswin::numeric)/(num_series.numws::numeric)::numeric) *100,2)||'%' AS perct
 FROM team_wins, num_series
 
--- Quesiton 8
+-- Quesiton 8 Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
 
+(
+SELECT team, park_name, (attendance/games) AS avg_attendance, 'Highest Attendance' AS Atten_Rank
+FROM homegames
+INNER JOIN parks
+USING (park)
+WHERE games > 10
+AND year = 2016
+ORDER BY avg_attendance DESC
+LIMIT 5
+)
+UNION ALL
+(
+SELECT team, park_name, (attendance/games) AS avg_attendance, 'Lowest Attendance' AS Atten_Rank
+FROM homegames
+INNER JOIN parks
+USING (park)
+WHERE games > 10
+AND year = 2016
+ORDER BY avg_attendance
+LIMIT 5
+)
+
+
+-- Question 9 Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
+
+WITH winnersboth AS
+((SELECT playerid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+AND awardsmanagers.lgid = 'NL'
+)
+
+INTERSECT
+
+(SELECT playerid
+FROM awardsmanagers
+WHERE awardid = 'TSN Manager of the Year'
+AND awardsmanagers.lgid = 'AL'
+))
+SELECT CONCAT(people.namefirst, ' ', people.namelast) AS fullname, yearid,
+	lgid,
+	name
+FROM people
+INNER JOIN winnersboth
+USING(playerid)
+INNER JOIN awardsmanagers
+USING(playerid)
+INNER JOIN managers
+USING(playerid, yearid, lgid)
+INNER JOIN teams
+USING(teamid, yearid,lgid)
+WHERE awardid = 'TSN Manager of the Year'
+ORDER BY fullname, yearid;
+
+-- Question 10 Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
+SELECT
+    CONCAT(people.namefirst, ' ', people.namelast) AS fullname,
+    batting.hr AS hr_2016
+FROM batting
+INNER JOIN people
+ON batting.playerID = people.playerid
+WHERE batting.yearid = 2016
+	AND hr > 0
+	AND EXTRACT(YEAR FROM debut::date) <= 2016 - 9
+    AND batting.hr = (
+        SELECT MAX(hr)
+        FROM batting
+        WHERE people.playerid = batting.playerid)
+ORDER BY hr_2016 DESC;
