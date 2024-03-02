@@ -149,15 +149,51 @@ WHERE yearid BETWEEN 1970 AND 2016 AND wswin LIKE 'Y'
 ORDER BY w ASC
 LIMIT 1;
 -- [There were strikes in 1981]
--- Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case.
--- Then redo your query, excluding the problem year.
-SELECT w
+
+-- 7c. Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case.
+-- 7c. Then redo your query, excluding the problem year.
+SELECT *
 FROM teams
-WHERE yearid BETWEEN 1970 AND 1980 OR yearid BETWEEN 1981 AND 2016 AND wswin LIKE 'Y'
+WHERE (yearid BETWEEN 1970 AND 1980 OR yearid BETWEEN 1982 AND 2016) AND wswin LIKE 'Y'
 ORDER BY w ASC
 LIMIT 1;
--- How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+-- 7d. How often from 1970 – 2016 (yearid BETWEEN 1970 AND 2016)
+-- was it the case that a team with the most wins (teams with max # of wins for each year)
+-- also won the world series? (wswin LIKE 'Y')
+-- What percentage of the time? (count of wswin LIKE 'Y'/all years)
+
 -- Tables: teams
+
+WITH maxwins AS (
+	SELECT yearid,MAX(w) AS maxnumwins
+	FROM teams
+	WHERE yearid BETWEEN 1970 AND 2016
+	GROUP BY yearid
+	ORDER BY yearid ASC
+), numseasons AS (
+	SELECT COUNT(DISTINCT yearid) AS numgame
+	FROM teams
+	WHERE yearid BETWEEN 1970 AND 2016 
+), teamswswin AS (
+	SELECT COUNT(*) AS twswin
+	FROM teams
+	INNER JOIN maxwins
+	ON maxwins.yearid = teams.yearid AND maxwins.maxnumwins = teams.w
+	WHERE wswin = 'Y'
+)
+SELECT CONCAT(ROUND((teamswswin.twswin)::NUMERIC/(numseasons.numgame)::NUMERIC*100,2),'%')
+FROM teamswswin, numseasons
+
+
+-- 8a. Using the attendance figures from the homegames table,
+-- find the teams and parks which had the top 5 average attendance per game in 2016
+-- (where average attendance is defined as total attendance divided by number of games).
+-- Only consider parks where there were at least 10 games played.
+-- Report the park name, team name, and average attendance.
+-- Repeat for the lowest 5 average attendance.
+
+
 
 
 
