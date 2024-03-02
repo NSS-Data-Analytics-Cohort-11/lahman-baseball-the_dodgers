@@ -163,6 +163,7 @@ FROM teams
 WHERE yearid BETWEEN 1970 AND 2016 AND wswin = 'N'
 GROUP BY teamid, yearid
 ORDER BY wins DESC
+LIMIT 1;
 	 
 --ANSWER: Seattle in 2001 with 116 wins
 
@@ -176,6 +177,7 @@ FROM teams
 WHERE (yearid BETWEEN 1970 AND 2016) AND wswin = 'Y'
 GROUP BY teamid, yearid
 ORDER BY wins ASC
+LIMIT 1;
 
 --ANSWER: LAN in 1981 with 63 games
 --        Problem year: 1981 player's strike
@@ -197,9 +199,6 @@ ORDER BY wins ASC
 
 --7d. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
 
--- Who had the most wins each year?
--- Who won the series?
-
 WITH max_wins AS
 		(SELECT
 			yearid AS year,
@@ -208,18 +207,19 @@ WITH max_wins AS
 		WHERE yearid >= 1970
 		GROUP BY yearid
 		ORDER BY yearid),
-seasons AS
+	seasons AS
 		(SELECT
 			COUNT(DISTINCT yearid) total_seasons
 		FROM teams
 		WHERE yearid >= 1970),
-team_ws_wins AS
+	team_ws_wins AS
 		(SELECT
 			COUNT (DISTINCT yearid) AS most_wins_ws
 		FROM teams
-		 INNER JOIN max_wins
-		 ON teams.yearid = max_wins.year AND teams.w = most_wins
-		 WHERE wswin ='Y')
+		INNER JOIN max_wins
+		ON teams.yearid = max_wins.year 
+		 	AND teams.w = most_wins
+		WHERE wswin ='Y')
 		
 SELECT
 	ROUND(most_wins_ws::NUMERIC / total_seasons::NUMERIC * 100 ,2)||'%' as percentage_max_wins
@@ -229,7 +229,7 @@ FROM seasons, team_ws_wins
 
 (SELECT
 	p.park_name,
-	t.name, 
+	t.name as team_name, 
 	h.attendance/h.games as avg_attendance,
 	'High Attendace' as attendance_range
 FROM homegames as h
@@ -307,26 +307,17 @@ USING (teamid,yearid)
 WHERE playerid IN (SELECT winners.playid FROM winners)
 
 -- 10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
---tables: people, batting 
 
 SELECT
-	p.playerid,
-	p.namefirst || ' ' || p.namelast,
-	MAX(b.hr) as max_home_runs
-FROM people as p
-
-INNER JOIN batting as b 
-ON b.playerid = p.playerid
-
---GROUP BY p.playerid, p.namefirst || ' ' || p.namelast, b.yearid
-
-playerid
-first
-last
-firstgame
-lastgame
-
-sum(homeruns)
-
-
-
+    p.namefirst || ' ' || p.namelast AS player_name,
+    b.hr AS home_runs_2016
+FROM batting AS b
+INNER JOIN people AS p ON b.playerID = p.playerid
+WHERE b.yearid = 2016
+	AND hr > 0
+	AND EXTRACT(YEAR FROM debut::date) <= 2016 - 9
+    AND b.hr = (
+        SELECT MAX(hr)
+        FROM batting
+        WHERE playerid = b.playerid)
+ORDER BY home_runs_2016 DESC;
