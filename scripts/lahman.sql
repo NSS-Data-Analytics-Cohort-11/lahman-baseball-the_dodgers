@@ -113,24 +113,83 @@ WHERE batting.yearid = 2016
 AND COALESCE(sb+cs)>=20
 ORDER BY success DESC
 
--- Question 7 From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+-- Question 7 a. From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? 
 
 SELECT yearid, teamid, w
 FROM teams
 WHERE wswin = 'Y'
-AND yearid > 1970
+AND yearid >= 1970
 ORDER BY w 
+
+-- Question 7 b. What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. 
 
 SELECT yearid, teamid, w
 FROM teams
 WHERE wswin = 'N'
-AND yearid > 1970
+AND yearid >= 1970
 ORDER BY w DESC
 
-SELECT *
+/*SELECT *
 FROM teams
 WHERE wswin = 'Y'
-ORDER BY w 
+ORDER BY w */
 
 -- Answer: There was a baseball strike in 1981 during June/July
+
+SELECT yearid, w,
+	(SELECT teamid
+FROM teams
+WHERE wswin = 'Y'
+AND yearid > 1970
+ORDER BY w
+LIMIT 1),
+	(SELECT teamid
+FROM teams
+WHERE wswin = 'N'
+AND yearid > 1970
+ORDER BY w DESC
+LIMIT 1)
+FROM teams
+ORDER BY w 
+
+
+-- Question 7 c. Then redo your query, excluding the problem year. 
+
+SELECT yearid, teamid, w
+FROM teams
+WHERE wswin = 'Y'
+AND yearid > 1970
+AND yearid !=1981
+ORDER BY w 
+
+-- Question 7 d. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+
+WITH max_wins AS
+(
+SELECT yearid, MAX(w) AS wins
+FROM teams
+WHERE yearid >= 1970
+GROUP BY yearid
+ORDER BY yearid
+),
+team_wins AS
+(
+SELECT COUNT(*) AS teamswin
+FROM teams
+INNER JOIN max_wins
+ON teams.yearid = max_wins.yearid AND teams.w = max_wins.wins
+WHERE wswin = 'Y'
+), 
+num_series AS
+(
+SELECT COUNT(DISTINCT yearid) AS numws
+FROM teams
+WHERE yearid >=1970
+)
+
+SELECT ROUND(((team_wins.teamswin::numeric)/(num_series.numws::numeric)::numeric) *100,2)||'%' AS perct
+FROM team_wins, num_series
+
+-- Quesiton 8
 
