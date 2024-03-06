@@ -172,64 +172,36 @@ WHERE playerid IN (SELECT playerid
 --ANSWER: 182.20 lbs and 71.46 inches (5.95ft)
 
 --Which side do they bat and/or throw?
-WITH right_batters AS (SELECT COUNT(bats) AS rightbat
-						FROM people
-						WHERE playerid IN (SELECT playerid
-				  		FROM halloffame
-						WHERE inducted = 'Y')
-						AND bats = 'R'),
-left_batters AS (SELECT COUNT(bats) AS leftbat
-						FROM people
-						WHERE playerid IN (SELECT playerid
-				  		FROM halloffame
-						WHERE inducted = 'Y')
-						AND bats = 'L'),
-throw_right AS (SELECT COUNT(throws) AS throwright
-						FROM people
-						WHERE playerid IN (SELECT playerid
-				  		FROM halloffame
-						WHERE inducted = 'Y')
-						AND throws = 'R'),
-throw_left AS (SELECT COUNT(throws) AS throwleft
-						FROM people
-						WHERE playerid IN (SELECT playerid
-				  		FROM halloffame
-						WHERE inducted = 'Y')
-						AND throws = 'L')
-			  			
-
-SELECT right_batters.rightbat,
-		left_batters.leftbat,
-		throw_right.throwright,
-		throw_left.throwleft
-FROM right_batters
-UNION 
-SELECT *
-FROM left_batters
-UNION
-SELECT *
-FROM throw_right
-UNION
-SELECT *
-FROM throw_left
-
-
---SELECT COUNT(rb.bats),
-		COUNT(lb.bats),
-		COUNT(tr.throws),
-		COUNT(tl.throws)
-FROM right_batters AS rb
-INNER JOIN left_batters AS lb
-USING (playerid)
-INNER JOIN throw_right AS tr
-USING (playerid)
-INNER JOIN throw_left AS tl
-USING (playerid)
-
-
-
-SELECT COUNT(*)
+SELECT COUNT(playerid),
+	CASE
+WHEN bats = 'R' THEN 'right_batter'
+WHEN bats = 'L' THEN 'left_batter'
+ELSE 'both'
+END AS batter_stance
 FROM people
 WHERE playerid IN (SELECT playerid
-				  	FROM halloffame)
-AND WHERE bats = 'R'
+				  	FROM halloffame
+				  WHERE inducted = 'Y')
+GROUP BY batter_stance
+--ANSWER: batter stance
+/*
+88	"left_batter"
+59	"both"
+170	"right_batter" */
+
+SELECT COUNT(playerid),
+	CASE
+WHEN bats = 'R' THEN 'right_thrower'
+WHEN bats = 'L' THEN 'left_thrower'
+ELSE 'both'
+END AS throw_arm
+FROM people
+WHERE playerid IN (SELECT playerid
+				  	FROM halloffame
+				  WHERE inducted = 'Y')
+GROUP BY throw_arm
+--ANSWER: throw_arm
+/*
+88	"left_thrower"
+170	"right_thrower"
+59	"both" */
