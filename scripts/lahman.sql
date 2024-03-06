@@ -263,3 +263,79 @@ WHERE batting.yearid = 2016
         FROM batting
         WHERE people.playerid = batting.playerid)
 ORDER BY hr_2016 DESC;
+
+--
+
+SELECT
+    CONCAT(people.namefirst, ' ', people.namelast) AS fullname,
+    batting.hr AS homeruns, batting.yearid, batting.rbi, people.debut::date
+FROM batting
+INNER JOIN people
+ON batting.playerID = people.playerid
+WHERE people.namefirst = 'Yadier'
+
+--
+-- Pitching stats for starters with Yadier Molina as the starting catcher for STL
+
+
+WITH with_yadi AS
+(
+SELECT
+    CONCAT(people.namefirst, ' ', people.namelast) AS fullname, pitching.yearid, 
+    pitching.g, pitching.gs, pitching.ERA, pitching.so AS strikeouts, pitching.h,  pitching.w, pitching.l,   pitching.r, teams.w AS team_wins_yr
+FROM people
+INNER JOIN pitching
+ON people.playerID = pitching.playerid
+INNER JOIN teams
+ON pitching.teamid = teams.teamid
+	AND pitching.yearid = teams.yearid
+WHERE teams.name LIKE 'St. Louis Cardinals'
+AND pitching.yearid >= 2005
+AND pitching.era > 0
+AND pitching.gs > 5
+ORDER BY era
+),
+
+-- STL Pitching stats for starters 11yrs prior to Yadier Molina
+without_yadi AS
+
+(SELECT
+    CONCAT(people.namefirst, ' ', people.namelast) AS fullname, pitching.yearid, 
+    pitching.g, pitching.gs, pitching.ERA, pitching.so AS strikeouts, pitching.h,  pitching.w, pitching.l,   pitching.r, teams.w AS team_wins_yr
+FROM people
+INNER JOIN pitching
+ON people.playerID = pitching.playerid
+INNER JOIN teams
+ON pitching.teamid = teams.teamid
+	AND pitching.yearid = teams.yearid
+WHERE teams.name LIKE 'St. Louis Cardinals'
+AND pitching.yearid BETWEEN 1995 AND 2004
+AND pitching.era > 0
+AND pitching.gs > 5
+ORDER BY era
+)
+-- Count of distinct pitchers from tables
+SELECT COUNT (DISTINCT(fullname))
+FROM without_yadi
+UNION
+SELECT COUNT(DISTINCT(fullname))
+FROM with_yadi
+--
+
+/*
+SELECT *, 
+CASE WHEN without_yadi.yearid >= 2005 THEN 'Y'
+	WHEN without_yadi.yearid BETWEEN 1995 AND 2004 THEN 'N'
+	END AS Yadier_Catching
+FROM without_yadi
+UNION 
+SELECT *, 
+CASE WHEN with_yadi.yearid >= 2005 THEN 'Y'
+	WHEN with_yadi.yearid BETWEEN 1995 AND 2004 THEN 'N'
+	END AS Yadier_Catching
+FROM with_yadi
+GROUP BY fullname
+--ORDER BY era
+LIMIT 50;
+
+
