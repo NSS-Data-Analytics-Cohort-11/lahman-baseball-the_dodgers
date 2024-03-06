@@ -192,11 +192,203 @@ FROM teamswswin, numseasons
 -- Only consider parks where there were at least 10 games played.
 -- Report the park name, team name, and average attendance.
 -- Repeat for the lowest 5 average attendance.
+-- Tables: homegames
+
+WITH highavg AS (
+	SELECT parks.park_name,teams.name, homegames.attendance/homegames.games AS avgattend
+	FROM homegames
+	INNER JOIN parks
+	USING (park)
+	INNER JOIN teams
+	ON homegames.team = teams.teamid AND homegames.year = teams.yearid
+	WHERE year = 2016 AND games >= 10
+	ORDER BY avgattend DESC
+	LIMIT 5)
+, lowavg AS (
+SELECT parks.park_name,teams.name, homegames.attendance/homegames.games AS avgattend
+	FROM homegames
+	INNER JOIN parks
+	USING (park)
+	INNER JOIN teams
+	ON homegames.team = teams.teamid AND homegames.year = teams.yearid
+	WHERE year = 2016 AND games >= 10
+	ORDER BY avgattend DESC
+	LIMIT 5)
+SELECT *
+FROM highavg
+UNION ALL
+SELECT *
+FROM lowavg
+
+-- 9a. Which managers have won the TSN Manager of the Year award
+-- in both the National League (NL) and the American League (AL)?
+-- Give their full name and the teams that they were managing when they won the award.
+-- Tables: 
+
+WITH allof AS (
+SELECT playerid,awardid,yearid,lgid
+FROM awardsmanagers
+WHERE awardid LIKE 'TSN%' AND lgid LIKE 'NL'
+UNION
+SELECT playerid,awardid,yearid,lgid
+FROM awardsmanagers
+WHERE awardid LIKE 'TSN%' AND lgid LIKE 'AL'
+), nl AS(
+SELECT playerid,awardid,yearid,lgid
+FROM awardsmanagers
+WHERE awardid LIKE 'TSN%' AND lgid LIKE 'NL'
+), al AS (
+SELECT playerid,awardid,yearid,lgid
+FROM awardsmanagers
+WHERE awardid LIKE 'TSN%' AND lgid LIKE 'AL'
+), winners AS (
+SELECT nl.playerid AS playid,nl.awardid,nl.yearid
+FROM nl
+INNER JOIN al
+USING (playerid)
+)
+SELECT people.namefirst,people.namelast,allof.playerid,
+allof.awardid,allof.yearid,allof.lgid,managers.teamid,teams.name
+FROM allof
+INNER JOIN people
+USING (playerid)
+INNER JOIN managers
+USING (playerid, yearid)
+INNER JOIN teams
+USING (teamid,yearid)
+WHERE playerid IN (SELECT winners.playid FROM winners)
+ORDER BY allof.yearid
+
+-- 10. Find all players who hit their career highest number of home runs in 2016.
+-- Consider only players who have played in the league for at least 10 years,
+-- and who hit at least one home run in 2016. Report the players' first and last
+-- names and the number of home runs they hit in 2016.
+-- Tables: people,
+
+-- Players with at least one hr in 2016, who played at least 10 years
+SELECT yearid, playerid, namefirst, namelast,
+	(finalgame::DATE-debut::DATE)/365 AS years_played
+FROM people
+INNER JOIN batting 
+USING (playerid)
+WHERE (finalgame::DATE-debut::DATE)/365 >= 10 AND yearid = 2016 AND hr >= 1
+
+--Players with a career high in 2016
+SELECT yearid,playerid,sum(hr) AS sumhr
+FROM batting
+GROUP BY yearid,playerid,hr
+HAVING yearid = 2016
+ORDER BY sumhr DESC
+
+--
+
+--JACKIE ROBINSON AWARDS--
+WITH jackie AS (
+SELECT playerid AS jacks
+FROM people
+WHERE namefirst = 'Jackie' AND namelast = 'Robinson'
+)
+SELECT playerid,awardid, yearid
+FROM awardsplayers, jackie
+WHERE playerid LIKE jackie.jacks
+ORDER BY awardsplayers.yearid ASC;
+
+--JACKIE ROBINSON Hall of Fame--
+WITH jackie AS (
+SELECT playerid AS jacks
+FROM people
+WHERE namefirst = 'Jackie' AND namelast = 'Robinson'
+)
+SELECT playerid,yearid,votes,inducted,category
+FROM halloffame, jackie
+WHERE playerid LIKE jackie.jacks
+ORDER BY halloffame.yearid ASC;
 
 
+-- Jackie Robinson Career Length -- [9 years]
+WITH jackie AS (
+SELECT playerid AS jacks
+FROM people
+WHERE namefirst = 'Jackie' AND namelast = 'Robinson'
+)
+SELECT playerid,debut,finalgame,(finalgame::DATE-debut::DATE)/365
+FROM people, jackie
+WHERE playerid LIKE jackie.jacks
+
+-- Brooklyn Dodgers Team ID
+SELECT DISTINCT teamid
+FROM teams
+WHERE name LIKE 'Brooklyn Dodgers'
+
+-- How long was Jackie Robinson on the Brooklyn Dodgers?
+-- Was on the BRO for 9 years, his entire career [from 1947 to 1948]
+WITH jackie AS (
+SELECT playerid AS jacks
+FROM people
+WHERE namefirst = 'Jackie' AND namelast = 'Robinson'
+)
+SELECT 
+FROM appearances, jackie
+WHERE playerid LIKE jackie.jacks
+
+-- BRO Attendance throughout 1947 to 1956 --
+SELECT year, team, SUM(attendance) AS totalattendance
+FROM homegames
+GROUP BY year, team
+HAVING year BETWEEN 1947 AND 1956 AND team LIKE 'BRO'
+ORDER BY year ASC
+
+-- BRO Attendance throughout 1936 to 1946 --
+SELECT year, team, SUM(attendance) AS totalattendance
+FROM homegames
+GROUP BY year, team
+HAVING year BETWEEN 1936 AND 1946 AND team LIKE 'BRO'
+ORDER BY year ASC
+
+-- BRO Attendance throughout 1936 to 1956 --
+SELECT year, team, SUM(attendance) AS totalattendance
+FROM homegames
+GROUP BY year, team
+HAVING year BETWEEN 1936 AND 1956 AND team LIKE 'BRO'
+ORDER BY year ASC
+
+-- When was BRO in the World Series? --
+SELECT *
+FROM seriespost
+WHERE (teamidwinner LIKE 'BRO' OR teamidloser LIKE 'BRO') AND (yearid BETWEEN 1936 AND 1956)
+ORDER BY yearid
+
+-- Overall homegame attandance by team in 1947 --
 
 
+-- homegame attendance in the 40s --
+
+-- WW2 ended on Sep 2, 1945
+
+-- Background --
+-- Appeared on Brooklyn Dodgers April 15, 1947
+-- Whether fans supported or opposed it,
+-- Robinson's presence on the field was a boon to attendance;
+-- more than one million people went to games involving Robinson in 1946
+-- an astounding figure by International League standards
+-- He won major-league baseball’s first official Rookie of the Year
+-- award and was the first baseball player, black or white,
+-- to be featured on a United States postage stamp.
 
 
+-- When Robinson was called up to the Dodgers, he did not disappoint,
+-- leading the National League in 1947 with 29 stolen bases while posting a solid .297 batting average.
+--The Brooklyn first baseman earned Rookie of the Year honors, winning the award over New York Giants pitcher
+-- Larry Jansen and Yankees hurler Spec Shea.
 
--
+-- In his 1949 MVP season, Robinson led all National League batters with a .342 batting average.
+--His 37 stolen bases led every player in the majors (as did the 16 times he was caught stealing
+
+
+-- On April 15, Robinson made his major league debut at the relatively advanced age of 28 at Ebbets Field before a crowd of 26,623 spectators,
+-- more than 14,000 of whom were black.[123] Although he failed to get a base hit, he walked and scored a run in the Dodgers' 
+-- 5–3 victory.[124] Robinson became the first player since 1884 to openly break the major league baseball color line.
+-- Black fans began flocking to see the Dodgers when they came to town, abandoning their Negro league teams.
+
+-- series 
+-- batting
