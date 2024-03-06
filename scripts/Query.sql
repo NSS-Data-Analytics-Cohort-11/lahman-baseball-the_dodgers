@@ -344,6 +344,6 @@ GROUP BY playerid, player_name, "2016_hr"
 HAVING COUNT (b.playerid) >= 10 AND "2016_hr" = MAX(hr)
 ORDER BY years_played DESC
 
-SELECT *
-FROM batting
-WHERE playerid = 'mcguide01'
+-- SELECT *
+-- FROM batting
+-- WHERE playerid = 'mcguide01'
